@@ -1,0 +1,52 @@
+services:
+
+  metastore:
+    build: 
+      context: ./catalog
+    environment:
+      SERVICE_NAME: metastore
+      HIVE_CUSTOM_CONF_DIR: /home/hive/conf
+    env_file:
+      - .env
+    ports:
+      - "9083:9083"
+    volumes:
+      - ./hive/conf:/home/hive/conf
+      - ./hive/warehouse:/opt/hive/data/warehouse
+    networks:
+      - lakehouse
+  
+  hive:
+    build: 
+      context: ./catalog
+    environment:
+      SERVICE_NAME: hiveserver2
+      SERVICE_OPTS: -Dhive.metastore.uris=thrift://metastore:9083
+      IS_RESUME: true
+      HIVE_CUSTOM_CONF_DIR: /home/hive/conf
+    env_file:
+      - .env
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    volumes:
+      - ./hive/conf:/home/hive/conf
+      - ./hive/warehouse:/opt/hive/data/warehouse
+    networks:
+      - lakehouse
+
+  minio:
+    image: minio/minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./buckets:/data
+    env_file:
+      - .env
+    networks:
+      - lakehouse
+
+networks:
+  lakehouse:
